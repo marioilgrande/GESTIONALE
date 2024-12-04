@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale Negozi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            text-align: center;
+            padding: 10px;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-red {
+            background-color: #dc3545;
+        }
+
+        .btn-red:hover {
+            background-color: #c82333;
+        }
+
+        .btn-yellow {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .btn-yellow:hover {
+            background-color: #e0a800;
+        }
+
+        textarea {
+            resize: none;
+            width: 100%;
+        }
+
+        .totals-row {
+            font-weight: bold;
+            background-color: #f1f1f1;
+        }
+
+        .btn-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gestionale Negozi</h1>
+    <div class="container">
+        <table id="storeTable">
+            <thead>
+                <tr>
+                    <th>Negozio</th>
+                    <th>Formazione</th>
+                    <th>Materiale POP</th>
+                    <th>Fatturazione Automatica</th>
+                    <th>A2A</th>
+                    <th>Tiscali</th>
+                    <th>Wordline</th>
+                    <th>Note</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Le righe saranno caricate da localStorage -->
+            </tbody>
+            <tfoot>
+                <tr class="totals-row">
+                    <td id="totalStores">Totale Negozi: 0</td>
+                    <td id="totalFormazione">0</td>
+                    <td id="totalMateriale">0</td>
+                    <td id="totalFatturazione">0</td>
+                    <td id="totalA2A">0</td>
+                    <td id="totalTiscali">0</td>
+                    <td id="totalWordline">0</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        <div class="btn-container">
+            <input type="text" id="newStoreName" placeholder="Nome del negozio" style="padding: 10px; width: 200px;">
+            <button class="btn" onclick="addStore()">Aggiungi Negozio</button>
+            <button class="btn" onclick="addColumn()">Aggiungi Colonna</button>
+        </div>
+        <div class="btn-container">
+            <button class="btn btn-yellow" onclick="renameColumn()">Rinomina Colonna</button>
+            <button class="btn btn-red" onclick="deleteColumn()">Elimina Colonna</button>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "negoziTableData";
+
+        function saveData() {
+            const table = document.getElementById("storeTable");
+            const data = Array.from(table.querySelectorAll("tbody tr")).map(row =>
+                Array.from(row.cells).map(cell => {
+                    const input = cell.querySelector("input, textarea");
+                    if (input) {
+                        if (input.type === "checkbox") return input.checked;
+                        return input.value || "";
+                    }
+                    return cell.textContent.trim();
+                })
+            );
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadData() {
+            const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            const tableBody = document.querySelector("#storeTable tbody");
+            storedData.forEach(rowData => {
+                const row = tableBody.insertRow();
+                row.innerHTML = rowData
+                    .map((cellData, i) => {
+                        if (i === rowData.length - 1) {
+                            return `
+                                <td>
+                                    <button class="btn btn-yellow" onclick="renameStore(this)">Rinomina</button>
+                                    <button class="btn btn-red" onclick="deleteStore(this)">Elimina</button>
+                                </td>`;
+                        } else if (typeof cellData === "boolean") {
+                            return `<td><input type="checkbox" onchange="updateTotals()" ${cellData ? "checked" : ""}></td>`;
+                        } else if (i === rowData.length - 2) {
+                            return `<td><textarea onchange="saveData()">${cellData}</textarea></td>`;
+                        } else {
+                            return `<td>${cellData}</td>`;
+                        }
+                    })
+                    .join("");
+            });
+            sortTable();
+            updateTotals();
+        }
+
+        function updateTotals() {
+            const rows = document.querySelectorAll("#storeTable tbody tr");
+            const totals = document.querySelectorAll("tfoot td");
+
+            totals.forEach((cell, index) => {
+                if (index > 0 && index < totals.length - 2) cell.textContent = 0;
+            });
+
+            rows.forEach(row => {
+                row.querySelectorAll("td input[type='checkbox']").forEach((checkbox, index) => {
+                    if (checkbox.checked) {
+                        const totalIndex = index + 1;
+                        totals[totalIndex].textContent = parseInt(totals[totalIndex].textContent) + 1;
+                    }
+                });
+            });
+
+            document.getElementById("totalStores").textContent = `Totale Negozi: ${rows.length}`;
+            saveData();
+        }
+
+        function addStore() {
+            const storeName = document.getElementById("newStoreName").value.trim();
+            if (!storeName) {
+                alert("Inserisci un nome valido per il negozio!");
+                return;
+            }
+
+            const table = document.querySelector("#storeTable tbody");
+            const colCount = document.querySelector("#storeTable thead tr").cells.length - 3;
+
+            const row = table.insertRow();
+            row.innerHTML = `
+                <td>${storeName}</td>
+                ${Array.from({ length: colCount }, () => '<td><input type="checkbox" onchange="updateTotals()"></td>').join('')}
+                <td><textarea placeholder="Aggiungi note..." onchange="saveData()"></textarea></td>
+                <td>
+                    <button class="btn btn-yellow" onclick="renameStore(this)">Rinomina</button>
+                    <button class="btn btn-red" onclick="deleteStore(this)">Elimina</button>
+                </td>`;
+            sortTable();
+            updateTotals();
+        }
+
+        function sortTable() {
+            const tbody = document.querySelector("#storeTable tbody");
+            const rows = Array.from(tbody.rows);
+
+            rows.sort((a, b) => {
+                const nameA = a.cells[0].textContent.toLowerCase();
+                const nameB = b.cells[0].textContent.toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function renameStore(button) {
+            const row = button.closest("tr");
+            const cell = row.cells[0];
+            const newName = prompt("Inserisci il nuovo nome del negozio:", cell.textContent);
+            if (newName) {
+                cell.textContent = newName;
+                sortTable();
+                saveData();
+            }
+        }
+
+        function deleteStore(button) {
+            const row = button.closest("tr");
+            row.remove();
+            updateTotals();
+        }
+
+        function addColumn() {
+            const colName = prompt("Inserisci il nome della nuova colonna:");
+            if (!colName) return;
+
+            const table = document.getElementById("storeTable");
+            const headerRow = table.querySelector("thead tr");
+            const footerRow = table.querySelector("tfoot tr");
+
+            const colIndex = headerRow.cells.length - 2;
+
+            const newHeader = headerRow.insertCell(colIndex);
+            newHeader.outerHTML = `<th>${colName}</th>`;
+
+            table.querySelectorAll("tbody tr").forEach(row => {
+                const newCell = row.insertCell(colIndex);
+                newCell.innerHTML = '<input type="checkbox" onchange="updateTotals()">';
+            });
+
+            const newFooter = footerRow.insertCell(colIndex);
+            newFooter.outerHTML = "<td>0</td>";
+
+            saveData();
+        }
+
+        function renameColumn() {
+            const columnIndex = prompt("Inserisci il numero della colonna da rinominare (escludendo Note e Azioni):");
+            if (!columnIndex) return;
+
+            const headerCell = document.querySelector(`#storeTable thead tr th:nth-child(${columnIndex})`);
+            if (headerCell) {
+                const newName = prompt("Inserisci il nuovo nome della colonna:", headerCell.textContent);
+                if (newName) headerCell.textContent = newName;
+                saveData();
+            }
+        }
+
+        function deleteColumn() {
+            const columnIndex = prompt("Inserisci il numero della colonna da eliminare (escludendo Note e Azioni):");
+            if (!columnIndex) return;
+
+            const table = document.getElementById("storeTable");
+            table.querySelectorAll("tr").forEach(row => {
+                const cell = row.cells[columnIndex - 1];
+                if (cell) cell.remove();
+            });
+
+            updateTotals();
+            saveData();
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
