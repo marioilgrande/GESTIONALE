@@ -156,10 +156,6 @@
             <button class="btn btn-yellow" onclick="renameColumn()">Rinomina Colonna</button>
             <button class="btn btn-red" onclick="deleteColumn()">Elimina Colonna</button>
         </div>
-        <td>
-            <button class="btn btn-yellow" onclick="renameStore(this)">Rinomina</button>
-            <button class="btn btn-red" onclick="deleteStore(this)">Elimina</button>
-        </td>
         
     </div>
 
@@ -273,15 +269,15 @@
         }
 
         function renameStore(button) {
-    const row = button.closest("tr"); // Trova la riga del pulsante cliccato
-    const cell = row.cells[0]; // Assumiamo che il nome del negozio sia nella prima cella
+    const row = button.closest("tr");
+    const cell = row.cells[0];
     const currentName = cell.textContent.trim();
     const newName = prompt("Inserisci il nuovo nome del negozio:", currentName);
 
     if (newName && newName.trim() !== "") {
-        cell.textContent = newName.trim(); // Aggiorna il nome nella cella
+        cell.textContent = newName.trim();
         saveData(); // Salva i dati aggiornati
-        sortTable(); // Riordina la tabella dopo la rinomina
+        sortTable(); // Ordina i negozi dopo la rinomina
     }
 }
 
@@ -316,6 +312,19 @@ function deleteStore(button) {
     });
 }
 
+function sortTable() {
+    const tbody = document.querySelector("#storeTable tbody");
+    const rows = Array.from(tbody.rows);
+
+    rows.sort((a, b) => {
+        const nameA = a.cells[0].textContent.trim().toLowerCase(); // Nome del negozio nella prima cella
+        const nameB = b.cells[0].textContent.trim().toLowerCase();
+        return nameA.localeCompare(nameB); // Confronto alfabetico
+    });
+
+    // Riaggiunge le righe ordinate al tbody
+    rows.forEach(row => tbody.appendChild(row));
+}
 
         function updateTotals() {
             const rows = document.querySelectorAll("#storeTable tbody tr");
